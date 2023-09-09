@@ -8,24 +8,28 @@
 const char* ssid = WLAN_SSID;
 const char* password = WLAN_PASSWORD;
 
-const int amountSensor = 10;
+const int amountTempHumSensors = 10;
+const int amountEnergySensors = 10;
 
 AsyncWebServer server(80);
 
-float temperatur = 20.0; // Startwert für die Temperatur
-float luftfeuchtigkeit = 50.0; // Startwert für die Luftfeuchtigkeit
-float sensor2 = 25.0; // Startwert für den zweiten Sensor
-float sensor3 = 30.0; // Startwert für den dritten Sensor
-
 //dynamic sensor data
-float temperatures[amountSensor];
-float humidities[amountSensor];
+float temperatures[amountTempHumSensors];
+float humidities[amountTempHumSensors];
+
+float voltages[amountEnergySensors];
+float currents[amountEnergySensors];
 
 //init dynamic sensor data
 void initSensorData(){
-  for(int i = 0; i < amountSensor; i ++){
+  for(int i = 0; i < amountTempHumSensors; i ++){
     temperatures[i] = (float)random(18, 26);
     humidities[i] = (float)random(45, 70);
+  }
+
+  for(int i = 0; i < amountEnergySensors; i ++){
+    voltages[i] = (float)random(220, 240);
+    currents[i] = (float)random(1, 50) / 1000.0;
   }
 }
 
@@ -40,12 +44,12 @@ void handleCM(AsyncWebServerRequest *request) {
   bool validRequest = false;
   int status = -1;
 
-  for(int i = 0; i < amountSensor; i++){
+  for(int i = 0; i < amountTempHumSensors; i++){
     String i_str = String(i);
     String cmnd = "status" + i_str;
     if(request->arg("cmnd") == cmnd){
       status = i;
-      i = amountSensor;
+      i = amountTempHumSensors;
       validRequest = true;
     }
   }
@@ -55,6 +59,11 @@ void handleCM(AsyncWebServerRequest *request) {
   } else {
     response = "Ungültiger Sensor-Identifier";
   }
+
+  if(request->arg("cmnd") == "test"){
+    response = generateEnergyData(voltages[0], currents[0]);
+  }
+
   Serial.println(response);
   
   request->send(200, "application/json", response);
@@ -80,13 +89,34 @@ String generateTempHumData(float temperature, float humidity) {
   return response;
 }
 
-void generateRandomData(float& value1, float& value2) {
-  value1 += random(-1, 2) / 10.0; 
-  value2 += random(-5, 6) / 10.0; 
+String generateEnergyData(float voltage, float current){
+  String response = "{\"StatusSNS\":{\"Time\":\"2023-09-08T09:22:10\",\"Energy\":{\"Voltage\":";
+  response += String(voltage);
+  response += ",\"Current\":";
+  response += String(current);
+  response += ",\"Power\":";
+  response += String(voltage*current);
+  response += "}}}";
+
+  return response;
+}
+
+void generateRandomData(float& value1, float& value2, int type) {
   
-  // Begrenze die Werte auf sinnvolle Bereiche
-  value1 = constrain(value1, 10, 30);
-  value2 = constrain(value2, 40, 70);
+  // Temp Hum
+  if(type == 0){
+    value1 += random(-1, 2) / 10.0; 
+    value2 += random(-5, 6) / 10.0; 
+    value1 = constrain(value1, 10, 30);
+    value2 = constrain(value2, 40, 70);
+  }
+  // Energy
+  else if(type == 1){
+    value1 += random(-1, 2); 
+    value2 += random(-5, 6) / 1000.0; 
+    value1 = constrain(value1, 200, 270);
+    value2 = constrain(value2, 0.0, 1.0);
+  }
 }
 
 void setup() {
@@ -113,8 +143,11 @@ void setup() {
 void loop() {
   //server.handleClient();
 
-  for(int i = 0; i < amountSensor; i++){
-    generateRandomData(temperatures[i], humidities[i]);
+  for(int i = 0; i < amountTempHumSensors; i++){
+    generateRandomData(temperatures[i], humidities[i], 0);
+  }
+  for(int i = 0; i < amountEnergySensors; i++){
+    generateRandomData(voltages[i], currents[i], 1);
   }
 
   delay(1000); // Warte eine Sekunde
