@@ -104,7 +104,7 @@ String generateTempHumData(float temperature, float humidity) {
 }
 
 String generateEnergyData(float voltage, float current){
-  String response = "{\"StatusSNS\":{\"Time\":\"2023-09-08T09:22:10\",\"Energy\":{\"Voltage\":";
+  String response = "{\"StatusSNS\":{\"Time\":\"2023-09-08T09:22:10\",\"ENERGY\":{\"Voltage\":";
   response += String(voltage);
   response += ",\"Current\":";
   response += String(current);
