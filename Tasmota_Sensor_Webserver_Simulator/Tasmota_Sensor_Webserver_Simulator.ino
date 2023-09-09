@@ -43,25 +43,39 @@ void handleCM(AsyncWebServerRequest *request) {
   String response;
   bool validRequest = false;
   int status = -1;
-
+  int type = -1;
   for(int i = 0; i < amountTempHumSensors; i++){
     String i_str = String(i);
-    String cmnd = "status" + i_str;
+    String cmnd = "status00" + i_str;
     if(request->arg("cmnd") == cmnd){
       status = i;
+      type = 0;
       i = amountTempHumSensors;
+      validRequest = true;
+    }
+  }
+  for(int i = 0; i < amountEnergySensors; i++){
+    String i_str = String(i);
+    String cmnd = "status10" + i_str;
+    if(request->arg("cmnd") == cmnd){
+      status = i;
+      type = 1;
+      i = amountEnergySensors;
       validRequest = true;
     }
   }
 
   if(validRequest){
-    response = generateTempHumData(temperatures[status], humidities[status]);
+    switch(type){
+      case 0:
+        response = generateTempHumData(temperatures[status], humidities[status]);
+        break;
+      case 1:
+        response = generateEnergyData(voltages[status], currents[status]);
+        break;
+    }
   } else {
     response = "Ungültiger Sensor-Identifier";
-  }
-
-  if(request->arg("cmnd") == "test"){
-    response = generateEnergyData(voltages[0], currents[0]);
   }
 
   Serial.println(response);
